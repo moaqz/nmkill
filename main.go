@@ -1,17 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
-	"log/slog"
+	"strconv"
 	"strings"
 
 	"github.com/pterm/pterm"
-)
-
-const (
-	allKey  = "all"
-	quitKey = "q"
 )
 
 func main() {
@@ -21,8 +17,9 @@ func main() {
 		return
 	}
 
-	if flags.Debug {
-		slog.SetLogLoggerLevel(slog.LevelDebug)
+	if flags.Help {
+		flags.Usage()
+		return
 	}
 
 	pterm.Info.Println(
@@ -48,50 +45,67 @@ func main() {
 	msg := fmt.Sprintf("Found %d node_modules folders (%s total)\n", result.FoldersCount(), byteCountIEC(result.TotalSize()))
 	sp.Success(msg)
 
+	renderFolders(result.Folders)
+
 	var quit bool
 	for !quit {
-		renderFolders(result.Folders)
+		selection, _ := pterm.DefaultInteractiveTextInput.Show("Enter a number, a list (e.g. 1,3,5), 'all' or 'q' to quit")
+		selection = strings.TrimSpace(selection)
 
-		selection, _ := pterm.DefaultInteractiveTextInput.Show("Enter a range (e.g. 1-3), a list (e.g. 1,3,5), 'all', or 'q' to quit")
-		selection = strings.Trim(selection, "")
-
-		if selection == "" || selection == quitKey {
+		switch strings.ToLower(selection) {
+		case "q", "quit":
 			quit = true
-		}
-
-		if selection == allKey {
-			confirm, err := pterm.DefaultInteractiveConfirm.Show()
-			if err != nil || !confirm {
-				pterm.Warning.Println("Operation cancelled")
-				return
+		case "all":
+			var indices []int
+			for i, f := range result.Folders {
+				if !f.Deleted {
+					indices = append(indices, i)
+				}
 			}
 
-			totalCount := result.PendingCount()
-			sp, _ := pterm.DefaultSpinner.Start(fmt.Sprintf("Deleting 0/%d folders", totalCount))
+			deleteWithProgress(len(indices), func(i int) error {
+				return result.Folders[indices[i]].Delete()
+			})
+			renderFolders(result.Folders)
+		default:
+			var indices []int
+			var parseErr error
 
-			deletedCount := 0
-			for i := 0; i <= len(result.Folders)-1; i++ {
-				if result.Folders[i].Deleted {
-					continue
-				}
-
-				sp.UpdateText(fmt.Sprintf("Deleting %d/%d folders", deletedCount+1, totalCount))
-
-				if err := result.Folders[i].Delete(); err != nil {
-					pterm.Error.Printf("Failed to delete %s\n", result.Folders[i].Path)
+			if strings.Contains(selection, ",") {
+				indices, parseErr = parseList(selection, result.FoldersCount())
+			} else {
+				num, err := strconv.Atoi(selection)
+				if err != nil {
+					parseErr = errors.New("not a number")
+				} else if num < 1 || num > len(result.Folders) {
+					parseErr = fmt.Errorf("folder %d not found (valid: 1-%d)", num, len(result.Folders))
 				} else {
-					deletedCount++
+					if result.Folders[num-1].Deleted {
+						renderFolders(result.Folders)
+						continue
+					}
+
+					indices = append(indices, num-1)
 				}
 			}
 
-			sp.Success(fmt.Sprintf("Completed! %d/%d folders deleted", deletedCount, totalCount))
-		}
+			if parseErr != nil {
+				pterm.Error.Print(parseErr.Error())
+				pterm.Println()
+				continue
+			}
 
-		pterm.Println()
+			deleteWithProgress(len(indices), func(i int) error {
+				return result.Folders[indices[i]].Delete()
+			})
+			renderFolders(result.Folders)
+		}
 	}
 }
 
 func renderFolders(folders []Folder) {
+	pterm.Println()
+
 	for i, f := range folders {
 		var prefix string
 		if f.Deleted {
@@ -113,4 +127,60 @@ func renderFolders(folders []Folder) {
 
 		pterm.Println()
 	}
+}
+
+func parseList(input string, max int) ([]int, error) {
+	parts := strings.SplitSeq(input, ",")
+
+	var indices []int
+	seen := make(map[int]bool)
+
+	for part := range parts {
+		part = strings.TrimSpace(part)
+
+		num, err := strconv.Atoi(part)
+		if err != nil {
+			return nil, fmt.Errorf("not a number: %s", part)
+		}
+
+		if num < 0 || num > max {
+			return nil, fmt.Errorf("folder %d not found (valid: 1-%d)", num, max)
+		}
+
+		if !seen[num] {
+			indices = append(indices, num-1)
+			seen[num] = true
+		}
+	}
+
+	return indices, nil
+}
+
+type DeleteFolderFn func(int) error
+
+func deleteWithProgress(total int, fn DeleteFolderFn) {
+	if total == 0 {
+		pterm.Info.Println("No folders to delete.")
+		return
+	}
+
+	msg := fmt.Sprintf("Delete %d folder(s)?", total)
+	if confirmed, _ := pterm.DefaultInteractiveConfirm.Show(msg); !confirmed {
+		pterm.Warning.Println("Operation cancelled")
+		return
+	}
+
+	sp, _ := pterm.DefaultSpinner.Start(fmt.Sprintf("Deleting 0/%d folders", total))
+	deleted := 0
+
+	for i := range total {
+		sp.UpdateText(fmt.Sprintf("Deleting %d/%d folders", deleted+1, total))
+		if err := fn(i); err != nil {
+			pterm.Error.Printf("❌ %v\n", err)
+		} else {
+			deleted++
+		}
+	}
+
+	sp.Success(fmt.Sprintf("Completed! %d/%d deleted\n", deleted, total))
 }

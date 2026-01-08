@@ -17,7 +17,7 @@ type Folder struct {
 
 func (f *Folder) Delete() error {
 	if err := os.RemoveAll(f.Path); err != nil {
-		return err
+		return fmt.Errorf("cannot delete %s: %w", f.Path, err)
 	}
 
 	f.Deleted = true

@@ -17,7 +17,11 @@ const (
 type Flags struct {
 	Directory string
 	Version   bool
-	Debug     bool
+	Help      bool
+}
+
+func (f *Flags) Usage() {
+	fmt.Print(customUsage())
 }
 
 func (f *Flags) define() {
@@ -26,6 +30,9 @@ func (f *Flags) define() {
 
 	flag.BoolVar(&f.Version, "v", false, "Print version")
 	flag.BoolVar(&f.Version, "version", false, "Print version")
+
+	flag.BoolVar(&f.Help, "h", false, "Print help")
+	flag.BoolVar(&f.Help, "help", false, "Print help")
 }
 
 func customUsage() string {

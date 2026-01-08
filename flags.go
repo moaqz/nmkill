@@ -3,8 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -56,7 +54,7 @@ func customUsage() string {
 
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "%s%sUsage:%s %s [OPTIONS]\n\n", underline, bold, reset, filepath.Base(os.Args[0]))
+	fmt.Fprintf(&b, "%s%sUsage:%s %s [OPTIONS]\n\n", underline, bold, reset, "nmkill")
 	fmt.Fprintf(&b, "%s%sOptions:%s\n", underline, bold, reset)
 
 	// TODO: Preserve insertion order.

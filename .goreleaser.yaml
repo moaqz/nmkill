@@ -1,0 +1,22 @@
+version: 2
+
+project_name: nmkill
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - ldflags:
+      - -X main.Version={{.Tag}}
+      - -X main.BuildDate={{.CommitDate}}
+      - -X main.GitCommit={{.FullCommit}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+
+archives:
+  - formats: binary

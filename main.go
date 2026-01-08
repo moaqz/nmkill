@@ -5,7 +5,6 @@ import (
 	"log"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/pterm/pterm"
 )
@@ -102,10 +101,16 @@ func renderFolders(folders []Folder) {
 		}
 
 		size := byteCountIEC(f.Size)
-		age := humanizeDuration(time.Since(f.ModTime))
+		age := relativeTime(f.ModTime)
 
 		pterm.Printf("%s %s\n", prefix, f.Path)
-		pterm.Print(pterm.Gray(fmt.Sprintf("    %s • %s\n", size, age)))
+
+		if age == "" {
+			pterm.Print(pterm.Gray(fmt.Sprintf("    %s\n", size)))
+		} else {
+			pterm.Print(pterm.Gray(fmt.Sprintf("    %s • %s\n", size, age)))
+		}
+
 		pterm.Println()
 	}
 }

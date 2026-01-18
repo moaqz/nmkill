@@ -47,6 +47,16 @@ func (n *NodeModulesScanResult) TotalSize() (total int64) {
 	return
 }
 
+func (n *NodeModulesScanResult) TotalFreedSpace() (total int64) {
+	for _, f := range n.Folders {
+		if f.Deleted {
+			total += f.Size
+		}
+	}
+
+	return
+}
+
 func (n *NodeModulesScanResult) FoldersCount() int {
 	return len(n.Folders)
 }

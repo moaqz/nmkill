@@ -101,6 +101,14 @@ func main() {
 			renderFolders(result.Folders)
 		}
 	}
+
+	freedSpace := result.TotalFreedSpace()
+	if freedSpace > 0 {
+		pterm.Success.Printf("✓ Successfully freed %s of disk space\n",
+			pterm.LightGreen(byteCountIEC(freedSpace)))
+	} else {
+		pterm.Info.Println("No space was freed")
+	}
 }
 
 func renderFolders(folders []Folder) {

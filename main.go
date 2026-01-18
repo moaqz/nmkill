@@ -52,6 +52,10 @@ func main() {
 		selection, _ := pterm.DefaultInteractiveTextInput.Show("Enter a number, a list (e.g. 1,3,5), 'all' or 'q' to quit")
 		selection = strings.TrimSpace(selection)
 
+		if selection == "" {
+			continue
+		}
+
 		switch strings.ToLower(selection) {
 		case "q", "quit":
 			quit = true

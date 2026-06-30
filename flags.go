@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"strings"
+
+	"github.com/docker/go-units"
 )
 
 const (
@@ -15,7 +17,16 @@ const (
 type Flags struct {
 	Directory string
 	Version   bool
+	MinSize   string
 	Help      bool
+}
+
+func (f *Flags) GetMinSize() (int64, error) {
+	if f.MinSize == "" {
+		return 0, nil
+	}
+
+	return units.FromHumanSize(f.MinSize)
 }
 
 func (f *Flags) Usage() {
@@ -25,6 +36,9 @@ func (f *Flags) Usage() {
 func (f *Flags) define() {
 	flag.StringVar(&f.Directory, "directory", ".", "Root directory to search (default: current directory)")
 	flag.StringVar(&f.Directory, "d", ".", "Root directory to search (default: current directory)")
+
+	flag.StringVar(&f.MinSize, "min-size", "", "Set minimum size")
+	flag.StringVar(&f.MinSize, "s", "", "Set minimum size")
 
 	flag.BoolVar(&f.Version, "v", false, "Print version")
 	flag.BoolVar(&f.Version, "version", false, "Print version")

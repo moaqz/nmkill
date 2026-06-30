@@ -31,7 +31,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := FindAndMeasureNodeModules(flags.Directory)
+	minSize, err := flags.GetMinSize()
+	if err != nil {
+		sp.Fail(fmt.Sprintf("Invalid value for --min-size: %v", err))
+		return
+	}
+
+	result, err := getNodeModules(flags.Directory, minSize)
 	if err != nil {
 		sp.Fail("Scan failed")
 		return
@@ -113,6 +119,23 @@ func main() {
 	} else {
 		pterm.Info.Println("No space was freed")
 	}
+}
+
+func getNodeModules(rootDir string, minSize int64) (NodeModulesScanResult, error) {
+	result, err := FindAndMeasureNodeModules(rootDir)
+	if err != nil {
+		return NodeModulesScanResult{}, err
+	}
+
+	var filteredFolders []Folder
+	for _, f := range result.Folders {
+		if f.Size >= minSize {
+			filteredFolders = append(filteredFolders, f)
+		}
+	}
+
+	result.Folders = filteredFolders
+	return result, nil
 }
 
 func renderFolders(folders []Folder) {

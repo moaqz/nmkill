@@ -2,7 +2,10 @@ module github.com/moaqz/nmkill
 
 go 1.25.5
 
-require github.com/pterm/pterm v0.12.82
+require (
+	github.com/docker/go-units v0.5.0
+	github.com/pterm/pterm v0.12.82
+)
 
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
